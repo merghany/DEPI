@@ -54,8 +54,7 @@ services:
     image: postgres:15
     container_name: airflow-postgres
     restart: always
-    env_file:
-      - .env
+    
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -138,7 +137,19 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+  dbgate:
+    image: dbgate/dbgate:latest
+    container_name: dbgate
+    restart: always
+    ports:
+      - "3000:3000"
+    volumes:
+      - dbgate_data:/root/.dbgate
+
+
+  
 
 volumes:
   postgres_data:
   mysql_data:
+  dbgate_data:
