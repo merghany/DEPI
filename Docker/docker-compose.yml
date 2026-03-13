@@ -127,16 +127,42 @@ services:
       - "3306:3306"
     environment:
       MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: testdb
+      MYSQL_DATABASE: payment_gateway
       MYSQL_USER: user
       MYSQL_PASSWORD: password
     volumes:
       - mysql_data:/var/lib/mysql
+      - ./init-scripts:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 10s
       timeout: 5s
       retries: 5
+  payment-data-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.python
+    container_name: payment-data-service
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_USER: root
+      MYSQL_PASSWORD: root
+      MYSQL_DATABASE: payment_gateway
+    volumes:
+      - ./generate_data.py:/app/generate_data.py
+      - ./stream_data.py:/app/stream_data.py
+      - ./requirements.txt:/app/requirements.txt
+      - ./stream_requirements.txt:/app/stream_requirements.txt
+      - ./entrypoint.sh:/app/entrypoint.sh
+      - data_flag:/app/.data_generated  # Persistent flag file
+    working_dir: /app
+    entrypoint: ["/bin/bash", "/app/entrypoint.sh"]
+    restart: unless-stopped  # Will restart if stream_data.py crashes
+
   dbgate:
     image: dbgate/dbgate:latest
     container_name: dbgate
@@ -153,3 +179,4 @@ volumes:
   postgres_data:
   mysql_data:
   dbgate_data:
+  data_flag:
