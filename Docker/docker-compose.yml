@@ -1,17 +1,48 @@
+version: '3.9'
 
+# ─────────────────────────────────────────────────────────────────
+# Shared environment block — referenced by both Python services
+# ─────────────────────────────────────────────────────────────────
+x-db-env: &db-env
+  DB_HOST:     mysql
+  DB_PORT:     "3306"
+  DB_USER:     pg_user
+  DB_PASSWORD: pg_password_2024
+  DB_NAME:     payment_gateway
+
+x-python-base: &python-base
+  build:
+    context: .
+    dockerfile: Data-Sources/Dockerfile
+  environment:
+    <<: *db-env
+  depends_on:
+    mysql:
+      condition: service_healthy
+  networks:
+    - payment_net
+
+# ─────────────────────────────────────────────────────────────────
 services:
+
+  # ── Zookeeper ─────────────────────────────────────────────────
   zookeeper:
     image: confluentinc/cp-zookeeper:7.4.1
     container_name: zookeeper
+    restart: unless-stopped
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
     ports:
       - "2181:2181"
+    networks:
+      - payment_net
 
+  # ── Kafka ─────────────────────────────────────────────────────
   kafka:
     image: confluentinc/cp-kafka:7.4.1
     container_name: kafka
+    restart: unless-stopped
     depends_on:
       - zookeeper
     ports:
@@ -27,46 +58,61 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+    networks:
+      - payment_net
 
+  # ── Kafdrop ───────────────────────────────────────────────────
   kafdrop:
     image: obsidiandynamics/kafdrop:latest
     container_name: kafdrop
+    restart: unless-stopped
     depends_on:
       - kafka
     ports:
       - "9000:9000"
     environment:
       KAFKA_BROKERCONNECT: kafka:9092
+    networks:
+      - payment_net
 
+  # ── MinIO ─────────────────────────────────────────────────────
   minio:
     image: minio/minio:latest
     container_name: minio
-   
+    restart: unless-stopped
     environment:
-      MINIO_ROOT_USER:  ${MINIO_ROOT_USER}
+      MINIO_ROOT_USER:     ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
     command: server /data --console-address ":9001"
     ports:
       - "9001:9001"
       - "9002:9000"
+    volumes:                              # FIX: was missing — data was ephemeral
+      - minio_data:/data
+    networks:
+      - payment_net
 
+  # ── PostgreSQL (Airflow backend) ───────────────────────────────
   postgres:
     image: postgres:15
     container_name: airflow-postgres
     restart: always
-    
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_USER:     ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
-    volumes:
+      POSTGRES_DB:       ${POSTGRES_DB}
+    volumes:                              # FIX: broken indentation + stray key
       - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+    networks:
+      - payment_net
 
+  # ── Airflow Init (runs once) ───────────────────────────────────
   airflow-init:
     image: apache/airflow:2.9.3
     container_name: airflow-init
+    restart: "no"                         # FIX: was missing — kept restarting
     env_file:
       - .env
     depends_on:
@@ -83,33 +129,19 @@ services:
       airflow db migrate &&
       airflow users create --username ${AIRFLOW_ADMIN_USER} --firstname ${AIRFLOW_ADMIN_FIRSTNAME} --lastname ${AIRFLOW_ADMIN_LASTNAME} --role Admin --email ${AIRFLOW_ADMIN_EMAIL} --password ${AIRFLOW_ADMIN_PASSWORD} &&
       echo '✅ Airflow DB initialized successfully.'"
+    networks:
+      - payment_net
 
-  airflow-webserver:
-    image: apache/airflow:2.9.3
-    container_name: airflow-webserver
-    restart: always
-    depends_on:
-      - airflow-init
-      - airflow-scheduler
-      - postgres
-    environment:
-      AIRFLOW__CORE__LOAD_EXAMPLES: "False"
-      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
-    volumes:
-      - ./dags:/opt/airflow/dags
-      - ./logs:/opt/airflow/logs
-      - ./plugins:/opt/airflow/plugins
-    ports:
-      - "8080:8080"
-    command: webserver
-
+  # ── Airflow Scheduler ─────────────────────────────────────────
   airflow-scheduler:
     image: apache/airflow:2.9.3
     container_name: airflow-scheduler
     restart: always
     depends_on:
-      - airflow-init
-      - postgres
+      postgres:
+        condition: service_started
+      airflow-init:
+        condition: service_completed_successfully  # FIX: wait for init to finish
     environment:
       AIRFLOW__CORE__LOAD_EXAMPLES: "False"
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
@@ -118,65 +150,166 @@ services:
       - ./logs:/opt/airflow/logs
       - ./plugins:/opt/airflow/plugins
     command: scheduler
+    networks:
+      - payment_net
+
+  # ── Airflow Webserver ─────────────────────────────────────────
+  airflow-webserver:
+    image: apache/airflow:2.9.3
+    container_name: airflow-webserver
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_started
+      airflow-init:
+        condition: service_completed_successfully  # FIX: wait for init, not scheduler
+      airflow-scheduler:
+        condition: service_started
+    environment:
+      AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./plugins:/opt/airflow/plugins
+    ports:
+      - "8082:8080"                       # FIX: was 8080 — conflicted with adminer
+    command: webserver
+    networks:
+      - payment_net
+
+  # ── 1. MySQL 8.0 ──────────────────────────────────────────────
   mysql:
-    image: mysql:8
-    container_name: bigdata-mysql
+    image: mysql:8.0
+    container_name: payment_gateway_db
     restart: unless-stopped
-  
+    environment:
+      MYSQL_ROOT_PASSWORD: root_secret_2024
+      MYSQL_DATABASE:      payment_gateway
+      MYSQL_USER:          pg_user
+      MYSQL_PASSWORD:      pg_password_2024
     ports:
       - "3306:3306"
-    environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: payment_gateway
-      MYSQL_USER: pg_user
-      MYSQL_PASSWORD: pg_password_2024
-    
     volumes:
       - mysql_data:/var/lib/mysql
       - ./init-scripts:/docker-entrypoint-initdb.d
+    command: >
+      --default-authentication-plugin=mysql_native_password
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --innodb-buffer-pool-size=512M
+      --max-connections=500
+      --innodb-log-file-size=128M
+      --slow-query-log=1
+      --slow-query-log-file=/var/log/mysql/slow.log
+      --long-query-time=2
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test:
+        - CMD
+        - mysqladmin
+        - ping
+        - -h
+        - localhost
+        - -u
+        - pg_user
+        - -ppg_password_2024
       interval: 10s
-      timeout: 5s
-      
-  payment-data-service:
-    build:
-      context: .
-      dockerfile: Data-Sources\Dockerfile.python
-    container_name: payment-data-service
+      timeout:  5s
+      retries:  5
+      start_period: 30s
+    networks:
+      - payment_net
+
+  # ── 2. Adminer — web DB browser ───────────────────────────────
+  adminer:
+    image: adminer:4.8.1
+    container_name: payment_adminer
+    restart: unless-stopped
+    ports:
+      - "8081:8080"                       # FIX: was 8080 — conflicted with airflow
+    environment:
+      ADMINER_DEFAULT_SERVER: mysql
+      ADMINER_DESIGN: dracula
     depends_on:
       mysql:
         condition: service_healthy
-    environment:
-      MYSQL_HOST: dockerhost
-      MYSQL_PORT: 3306
-      MYSQL_USER: pg_user
-      MYSQL_PASSWORD: pg_password_2024
-      MYSQL_DATABASE: payment_gateway
-    volumes:
-      - ./Data-Sources/generate_data.py:/app/generate_data.py
-      - ./Data-Sources/stream_data.py:/app/stream_data.py
-      - ./Data-Sources/requirements.txt:/app/requirements.txt
-      - ./Data-Sources/entrypoint.sh:/app/entrypoint.sh
-      - data_flag:/app/.data_generated  # Persistent flag file
-    working_dir: /app
-    entrypoint: ["/bin/bash", "/app/entrypoint.sh"]
-    restart: unless-stopped  # Will restart if stream_data.py crashes
+    networks:
+      - payment_net
 
-  dbgate:
-    image: dbgate/dbgate:latest
-    container_name: dbgate
-    restart: always
-    ports:
-      - "3000:3000"
-    volumes:
-      - dbgate_data:/root/.dbgate
+  # ── 3. Data Seeder ────────────────────────────────────────────
+  data_seeder:
+    <<: *python-base
+    container_name: payment_data_seeder
+    restart: "no"
+    command:
+      - python
+      - generate_data.py
+      - --host
+      - mysql
+      - --port
+      - "3306"
+      - --user
+      - pg_user
+      - --password
+      - pg_password_2024
+      - --database
+      - payment_gateway
+      - --clients
+      - "10000"
+      - --pos
+      - "1000"
+      - --transactions
+      - "155000"
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "3"
 
+  # ── 4. Data Streamer ──────────────────────────────────────────
+  data_streamer:
+    <<: *python-base
+    container_name: payment_data_streamer
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      data_seeder:
+        condition: service_completed_successfully
+    command:
+      - python
+      - stream_data.py
+      - --host
+      - mysql
+      - --port
+      - "3306"
+      - --user
+      - pg_user
+      - --password
+      - pg_password_2024
+      - --database
+      - payment_gateway
+      - --txn-per-second
+      - "2"
+      - --clients-per-hour
+      - "2"
+      - --pos-per-day
+      - "1"
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
 
-  
-
+# ─────────────────────────────────────────────────────────────────
 volumes:
   postgres_data:
+ #   driver: local
+  minio_data:                             # FIX: declared missing volume
+    driver: local
   mysql_data:
-  dbgate_data:
-  data_flag:
+    driver: local
+
+networks:
+  payment_net:
+    driver: bridge

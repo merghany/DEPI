@@ -2,7 +2,9 @@
 -- Electronic Payment Gateway Database Schema
 -- ============================================================
 
-CREATE DATABASE IF NOT EXISTS payment_gateway;
+CREATE DATABASE IF NOT EXISTS payment_gateway
+  CHARACTER SET utf8mb4
+  COLLATE utf8mb4_unicode_ci;
 
 USE payment_gateway;
 
@@ -276,5 +278,5 @@ INSERT INTO merchant_categories (mcc, description) VALUES
   (5411,'Grocery Stores'),(5812,'Restaurants'),(5541,'Gas Stations'),
   (5912,'Drug Stores'),(5732,'Electronics Stores'),(5651,'Clothing Stores'),
   (7011,'Hotels'),(4111,'Transportation'),(5999,'Misc Retail'),
-  (5045,'Computers & Peripherals'),(5411,'Supermarkets'),(7841,'Video Rental'),
+  (5045,'Computers & Peripherals'),(5400,'Supermarkets'),(7841,'Video Rental'),
   (5621,'Women Clothing'),(5311,'Department Stores'),(5691,'Men Clothing');

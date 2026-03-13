@@ -18,6 +18,7 @@ import argparse
 import random
 import uuid
 import math
+import sys
 from datetime import datetime, timedelta, date
 from decimal import Decimal
 
@@ -103,6 +104,30 @@ network_ids = [r[0] for r in cur.fetchall()]
 
 cur.execute("SELECT mcc FROM merchant_categories")
 mcc_list = [r[0] for r in cur.fetchall()]
+
+# ---------------------------------------------------------------------------
+# Validate all reference tables loaded correctly — fail fast with clear message
+# ---------------------------------------------------------------------------
+ref_checks = {
+    "countries":            country_ids,
+    "transaction_types":    type_ids,
+    "transaction_statuses": status_ids,
+    "card_networks":        network_ids,
+    "merchant_categories":  mcc_list,
+}
+empty = [name for name, lst in ref_checks.items() if not lst]
+if empty:
+    print(f"\n❌  ERROR: The following reference tables are empty: {', '.join(empty)}")
+    print("    This usually means init.sql failed partway through (e.g. a duplicate")
+    print("    primary key). To fix:")
+    print("      1. docker-compose down -v")
+    print("      2. docker-compose up --build")
+    sys.exit(1)
+
+print(f"   ✓ Reference data loaded — "
+      f"{len(country_ids)} countries, {len(type_ids)} types, "
+      f"{len(status_ids)} statuses, {len(network_ids)} networks, "
+      f"{len(mcc_list)} MCC codes")
 
 # ---------------------------------------------------------------------------
 # 1. MERCHANTS  (200 merchants backing 1 000 POS)
