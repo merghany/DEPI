@@ -128,8 +128,9 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: payment_gateway
-      MYSQL_USER: user
-      MYSQL_PASSWORD: password
+      MYSQL_USER: pg_user
+      MYSQL_PASSWORD: pg_password_2024
+    
     volumes:
       - mysql_data:/var/lib/mysql
       - ./init-scripts:/docker-entrypoint-initdb.d
@@ -137,27 +138,26 @@ services:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      
   payment-data-service:
     build:
       context: .
-      dockerfile: Dockerfile.python
+      dockerfile: Data-Sources\Dockerfile.python
     container_name: payment-data-service
     depends_on:
       mysql:
         condition: service_healthy
     environment:
-      MYSQL_HOST: mysql
+      MYSQL_HOST: dockerhost
       MYSQL_PORT: 3306
-      MYSQL_USER: root
-      MYSQL_PASSWORD: root
+      MYSQL_USER: pg_user
+      MYSQL_PASSWORD: pg_password_2024
       MYSQL_DATABASE: payment_gateway
     volumes:
-      - ./generate_data.py:/app/generate_data.py
-      - ./stream_data.py:/app/stream_data.py
-      - ./requirements.txt:/app/requirements.txt
-      - ./stream_requirements.txt:/app/stream_requirements.txt
-      - ./entrypoint.sh:/app/entrypoint.sh
+      - ./Data-Sources/generate_data.py:/app/generate_data.py
+      - ./Data-Sources/stream_data.py:/app/stream_data.py
+      - ./Data-Sources/requirements.txt:/app/requirements.txt
+      - ./Data-Sources/entrypoint.sh:/app/entrypoint.sh
       - data_flag:/app/.data_generated  # Persistent flag file
     working_dir: /app
     entrypoint: ["/bin/bash", "/app/entrypoint.sh"]

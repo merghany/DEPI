@@ -5,11 +5,28 @@ echo "========================================="
 echo "Payment Gateway Data Generator & Streamer"
 echo "========================================="
 
-# Function to check if MySQL is ready
+# Function to check if MySQL is ready using Python
 wait_for_mysql() {
     echo "Waiting for MySQL to be ready..."
-    while ! mysqladmin ping -h"$MYSQL_HOST" -P"$MYSQL_PORT" -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" --silent; do
-        sleep 2
+    until python -c "
+import mysql.connector
+import time
+import sys
+try:
+    conn = mysql.connector.connect(
+        host='$MYSQL_HOST',
+        port=$MYSQL_PORT,
+        user='$MYSQL_USER',
+        password='$MYSQL_PASSWORD',
+        database='$MYSQL_DATABASE'
+    )
+    conn.close()
+    sys.exit(0)
+except Exception as e:
+    sys.exit(1)
+" 2>/dev/null; do
+        echo "   MySQL not ready yet - sleeping..."
+        sleep 3
     done
     echo "✓ MySQL is ready"
 }
