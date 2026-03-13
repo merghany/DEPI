@@ -1,4 +1,3 @@
-version: "3.8"
 
 services:
   zookeeper:
@@ -42,8 +41,9 @@ services:
   minio:
     image: minio/minio:latest
     container_name: minio
+   
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_USER:  ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
     command: server /data --console-address ":9001"
     ports:
@@ -54,6 +54,7 @@ services:
     image: postgres:15
     container_name: airflow-postgres
     restart: always
+    
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -66,6 +67,8 @@ services:
   airflow-init:
     image: apache/airflow:2.9.3
     container_name: airflow-init
+    env_file:
+      - .env
     depends_on:
       - postgres
     environment:
@@ -119,8 +122,7 @@ services:
     image: mysql:8
     container_name: bigdata-mysql
     restart: unless-stopped
-    networks:
-      - bigdata-network
+  
     ports:
       - "3306:3306"
     environment:
@@ -135,7 +137,19 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+  dbgate:
+    image: dbgate/dbgate:latest
+    container_name: dbgate
+    restart: always
+    ports:
+      - "3000:3000"
+    volumes:
+      - dbgate_data:/root/.dbgate
+
+
+  
 
 volumes:
   postgres_data:
   mysql_data:
+  dbgate_data:
