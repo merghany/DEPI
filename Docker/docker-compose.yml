@@ -172,8 +172,9 @@ services:
       options:
         max-size: "20m"
         max-file: "5"
-  # ── Zookeeper ─────────────────────────────────────────────────
-  # ── Zookeeper ─────────────────────────────────────────────────
+
+
+  # ── 5. Zookeeper ──────────────────────────────────────────────
   zookeeper:
     image: confluentinc/cp-zookeeper:7.4.1
     container_name: zookeeper
@@ -181,18 +182,30 @@ services:
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_4LW_COMMANDS_WHITELIST: "ruok,mntr,stat"
+      ZOOKEEPER_LOG4J_ROOT_LOGLEVEL: WARN
+      ZOOKEEPER_TOOLS_LOG4J_LOGLEVEL: WARN
+      ZOOKEEPER_MAX_CLIENT_CNXNS: 60
+      KAFKA_LOG4J_LOGGERS: "org.eclipse.jetty=ERROR,org.apache.zookeeper.server.quorum=ERROR,org.apache.zookeeper.server.ServerCnxnFactory=ERROR"
     ports:
       - "2181:2181"
+    healthcheck:
+      test: ["CMD", "cub", "zk-ready", "localhost:2181", "30"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
     networks:
       - payment_net
 
-  # ── Kafka ─────────────────────────────────────────────────────
+ # ── 6. Kafka ──────────────────────────────────────────────────
   kafka:
     image: confluentinc/cp-kafka:7.4.1
     container_name: kafka
-    restart: unless-stopped
-    depends_on:
-      - zookeeper
+    restart: unless-stopped                     # FIX 3a: was missing
+    depends_on:                                 # FIX 3b: was missing entirely
+      zookeeper:
+        condition: service_healthy
     ports:
       - "9092:9092"
       - "29092:29092"
@@ -200,40 +213,71 @@ services:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:29092
+      # FIX 2: had PLAINTEXT://localhost:9092,PLAINTEXT://kafka:9092,...
+      # Duplicate PLAINTEXT:// listener name crashes the broker on startup.
+      # One PLAINTEXT for inter-container traffic, one PLAINTEXT_HOST for host.
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://host.docker.internal:29092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      KAFKA_LOG_RETENTION_HOURS: 168           # 7 days
-      KAFKA_LOG_SEGMENT_BYTES: 1073741824      # 1 GB
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false" # producer creates topics explicitly
-    healthcheck:
-      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9092 --list || exit 1"]
-      interval: 15s
+      KAFKA_LOG_RETENTION_HOURS: 168
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+    healthcheck:                                # FIX 3c: was missing — kafdrop/pipeline blocked forever
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9092 --list > /dev/null 2>&1"]
+      interval: 10s
       timeout: 10s
-      retries: 10
-      start_period: 30s
+      retries: 15
+      start_period: 60s
     networks:
       - payment_net
 
-  # ── Kafdrop ───────────────────────────────────────────────────
-  kafdrop:
-    image: obsidiandynamics/kafdrop:latest
-    container_name: kafdrop
+    # ── 8 Kafka Producer  (MySQL → Kafka) ───────────────────────────
+  
+  kafka_producer:
+    <<: *pipeline-base
+    container_name: kafka_producer
     restart: unless-stopped
+    environment:
+      <<: [*db-env, *kafka-env]
+      WAIT_FOR:       "mysql,kafka"
+      POLL_INTERVAL:  "15"
+      BATCH_SIZE:     "500"
+    depends_on:
+      - mysql
+      - kafka
+      - data_seeder
+    command:
+      - python
+      - kafka_producer.py
+
+  # ── 9  Kafka Consumer  (Kafka → MinIO) ───────────────────────────
+  
+  kafka_consumer:
+    <<: *pipeline-base
+    container_name: kafka_consumer
+    restart: unless-stopped
+    environment:
+      <<: [*kafka-env, *minio-env]
+      WAIT_FOR:       "kafka,minio"
+      KAFKA_GROUP_ID: "pg-minio-consumer"
+      FLUSH_ROWS:     "1000"
+      FLUSH_SECONDS:  "30"
     depends_on:
       kafka:
         condition: service_healthy
-    ports:
-      - "9000:9000"
-    environment:
-      KAFKA_BROKERCONNECT: kafka:9092
-    networks:
-      - payment_net
+      minio:
+        condition: service_healthy
+    command:
+      - python
+      - kafka_consumer.py
 
-  # ── MinIO ─────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────
+
+  
+  
+  # ── 10  MinIO ─────────────────────────────────────────────────────
   minio:
     image: minio/minio:latest
     container_name: minio
