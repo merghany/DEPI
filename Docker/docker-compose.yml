@@ -6,8 +6,8 @@ version: '3.9'
 x-db-env: &db-env
   DB_HOST:     mysql
   DB_PORT:     "3306"
-  DB_USER:     ${MySql_USER}
-  DB_PASSWORD: ${MySql_PASSWORD}
+  DB_USER:     pg_user
+  DB_PASSWORD: pg_password_2024
   DB_NAME:     payment_gateway
 
 x-kafka-env: &kafka-env
@@ -58,8 +58,8 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: root_secret_2024
       MYSQL_DATABASE:      payment_gateway
-      MYSQL_USER:          ${MySql_USER}
-      MYSQL_PASSWORD:      ${MySql_PASSWORD}
+      MYSQL_USER:          pg_user
+      MYSQL_PASSWORD:      pg_password_2024
     ports:
       - "3306:3306"
     volumes:
@@ -83,8 +83,8 @@ services:
         - -h
         - localhost
         - -u
-        - ${MySql_USER}
-        - ${MySql_PASSWORD}
+        - pg_user
+        - pg_password_2024
       interval: 10s
       timeout:  5s
       retries:  5
@@ -121,9 +121,9 @@ services:
       - --port
       - "3306"
       - --user
-      - ${MySql_USER}
+      - pg_user
       - --password
-      - ${MySql_PASSWORD}
+      - pg_password_2024
       - --database
       - payment_gateway
       - --clients
@@ -156,9 +156,9 @@ services:
       - --port
       - "3306"
       - --user
-      - ${MySql_USER}
+      - pg_user
       - --password
-      - ${MySql_PASSWORD}
+      - pg_password_2024
       - --database
       - payment_gateway
       - --txn-per-second
