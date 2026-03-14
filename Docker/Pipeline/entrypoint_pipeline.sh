@@ -77,15 +77,20 @@ wait_kafka() {
     echo "⏳  [Kafka] Waiting for broker to accept Kafka connections …"
     for i in $(seq 1 $MAX_RETRIES); do
         if python3 - <<EOF 2>/dev/null
-from kafka import KafkaAdminClient
+from kafka import KafkaConsumer
 try:
-    client = KafkaAdminClient(bootstrap_servers="$host:$port",
-                              request_timeout_ms=5000,
-                              client_id="healthcheck")
-    client.list_topics()
-    client.close()
+    # KafkaConsumer.topics() is the correct API to probe broker readiness
+    consumer = KafkaConsumer(
+        bootstrap_servers="$host:$port",
+        group_id=None,
+        request_timeout_ms=5000,
+        connections_max_idle_ms=8000,
+    )
+    consumer.topics()   # triggers metadata fetch from the broker
+    consumer.close()
     exit(0)
-except: exit(1)
+except Exception:
+    exit(1)
 EOF
         then
             echo "✅  [Kafka] Broker ready (attempt $i)"

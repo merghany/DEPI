@@ -11,13 +11,13 @@ WORKDIR /app
 
 RUN pip install --no-cache-dir \
     mysql-connector-python \
-    kafka-python==2.0.2 \
+    kafka-python-ng>=2.2.3 \
     minio \
     faker
 
-COPY kafka_producer.py   .
-COPY kafka_consumer.py   .
-COPY entrypoint_pipeline.sh .
+COPY Pipeline/kafka_producer.py   .
+COPY Pipeline/kafka_consumer.py   .
+COPY Pipeline/entrypoint_pipeline.sh .
 
 RUN chmod +x entrypoint_pipeline.sh
 

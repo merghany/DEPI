@@ -145,8 +145,21 @@ def fetch_incremental(cur, table: str, watermark_col: str,
 def topic_name(table: str) -> str:
     return f"{args.topic_prefix}.{table}"
 
+def list_topics() -> set:
+    """Return the set of all existing Kafka topics via KafkaConsumer."""
+    from kafka import KafkaConsumer
+    consumer = KafkaConsumer(
+        bootstrap_servers=args.kafka_brokers,
+        group_id=None,
+        request_timeout_ms=10_000,
+        connections_max_idle_ms=15_000,
+    )
+    topics = consumer.topics()
+    consumer.close()
+    return topics
+
 def ensure_topics(admin: KafkaAdminClient, tables: list):
-    existing = set(admin.list_topics())
+    existing = list_topics()
     to_create = []
     for table, *_ in tables:
         name = topic_name(table)
