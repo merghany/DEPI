@@ -6,8 +6,8 @@ version: '3.9'
 x-db-env: &db-env
   DB_HOST:     mysql
   DB_PORT:     "3306"
-  DB_USER:     pg_user
-  DB_PASSWORD: pg_password_2024
+  DB_USER:     ${MySql_USER}
+  DB_PASSWORD: ${MySql_PASSWORD}
   DB_NAME:     payment_gateway
 
 x-kafka-env: &kafka-env
@@ -58,8 +58,8 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: root_secret_2024
       MYSQL_DATABASE:      payment_gateway
-      MYSQL_USER:          pg_user
-      MYSQL_PASSWORD:      pg_password_2024
+      MYSQL_USER:          ${MySql_USER}
+      MYSQL_PASSWORD:      ${MySql_PASSWORD}
     ports:
       - "3306:3306"
     volumes:
@@ -83,8 +83,8 @@ services:
         - -h
         - localhost
         - -u
-        - pg_user
-        - -ppg_password_2024
+        - ${MySql_USER}
+        - ${MySql_PASSWORD}
       interval: 10s
       timeout:  5s
       retries:  5
@@ -121,9 +121,9 @@ services:
       - --port
       - "3306"
       - --user
-      - pg_user
+      - ${MySql_USER}
       - --password
-      - pg_password_2024
+      - ${MySql_PASSWORD}
       - --database
       - payment_gateway
       - --clients
@@ -156,9 +156,9 @@ services:
       - --port
       - "3306"
       - --user
-      - pg_user
+      - ${MySql_USER}
       - --password
-      - pg_password_2024
+      - ${MySql_PASSWORD}
       - --database
       - payment_gateway
       - --txn-per-second
@@ -174,7 +174,7 @@ services:
         max-file: "5"
 
 
-  # ── 5. Zookeeper ──────────────────────────────────────────────
+  # ── 4 Zookeeper ──────────────────────────────────────────────
   zookeeper:
     image: confluentinc/cp-zookeeper:7.4.1
     container_name: zookeeper
@@ -198,7 +198,7 @@ services:
     networks:
       - payment_net
 
- # ── 6. Kafka ──────────────────────────────────────────────────
+ # ── 5. Kafka ──────────────────────────────────────────────────
   kafka:
     image: confluentinc/cp-kafka:7.4.1
     container_name: kafka
@@ -233,7 +233,7 @@ services:
     networks:
       - payment_net
 
-  # ── Kafdrop ───────────────────────────────────────────────────
+  # ──6  Kafdrop ───────────────────────────────────────────────────
   kafdrop:
     image: obsidiandynamics/kafdrop:latest
     container_name: kafdrop
@@ -247,7 +247,7 @@ services:
       KAFKA_BROKERCONNECT: kafka:9092
     networks:
       - payment_net
-    # ── 8 Kafka Producer  (MySQL → Kafka) ───────────────────────────
+    # ── 7 Kafka Producer  (MySQL → Kafka) ───────────────────────────
   
   kafka_producer:
     <<: *pipeline-base
@@ -266,7 +266,7 @@ services:
       - python
       - kafka_producer.py
 
-  # ── 9  Kafka Consumer  (Kafka → MinIO) ───────────────────────────
+  # ── 8  Kafka Consumer  (Kafka → MinIO) ───────────────────────────
   
   kafka_consumer:
     <<: *pipeline-base
@@ -291,7 +291,7 @@ services:
 
   
   
-  # ── 10  MinIO ─────────────────────────────────────────────────────
+  # ── 9  MinIO ─────────────────────────────────────────────────────
   minio:
     image: minio/minio:latest
     container_name: minio

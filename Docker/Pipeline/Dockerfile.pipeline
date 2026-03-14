@@ -10,6 +10,7 @@ RUN pip install --no-cache-dir \
     "mysql-connector-python" \
     "kafka-python-ng>=2.2.3" \
     "minio" \
+    "pyarrow>=14.0.0" \
     "faker"
 
 COPY Pipeline/kafka_producer.py       .
