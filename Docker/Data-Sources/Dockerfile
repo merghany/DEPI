@@ -1,5 +1,6 @@
 FROM python:3.11-slim
 
+# System deps for mysql-connector
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     default-libmysqlclient-dev \
@@ -8,12 +9,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-COPY Data-Sources/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Install Python packages
+RUN pip install --no-cache-dir \
+    mysql-connector-python \
+    faker \
+    tqdm
 
+# Copy scripts and entrypoint
 COPY Data-Sources/generate_data.py .
 COPY Data-Sources/stream_data.py   .
-COPY Data-Sources/entrypoint.py    .
+COPY Data-Sources/entrypoint.sh    .
 
-# Pure Python entrypoint — no shell required
-ENTRYPOINT ["python3", "/app/entrypoint.py"]
+RUN chmod +x entrypoint.sh
+
+ENTRYPOINT ["./entrypoint.sh"]
