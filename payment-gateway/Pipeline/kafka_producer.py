@@ -6,18 +6,16 @@ Two-phase operation:
 
   Phase 1 — FULL LOAD
     Reads every row from each configured table and publishes to the
-    corresponding Kafka topic.  Runs once on startup (skipped if the
-    topic already contains messages, i.e. a previous run completed).
+    corresponding Kafka topic.
+
+    Idempotency: a compacted state topic (pg.__producer_state) records
+    completion per table. On restart, only tables without a completed
+    marker are re-loaded. Wiping Kafka volumes clears the markers and
+    triggers a fresh full load.
 
   Phase 2 — INCREMENTAL CDC POLL
     Polls each table every POLL_INTERVAL seconds for rows whose
-    watermark column (created_at / initiated_at) is newer than the
-    last seen value and pushes only the delta.
-
-Topics created automatically (one per table):
-    pg.transactions        pg.clients          pg.merchants
-    pg.pos_terminals       pg.payment_cards    pg.fraud_alerts
-    pg.refunds             pg.settlement_batches
+    watermark column (created_at) is newer than the last seen value.
 
 Message format (JSON):
     {
@@ -26,11 +24,7 @@ Message format (JSON):
     }
 
 Requirements:
-    pip install mysql-connector-python kafka-python
-
-Usage:
-    python kafka_producer.py [options]
-    All options can also be set via environment variables.
+    pip install mysql-connector-python kafka-python-ng
 """
 
 import argparse
@@ -43,26 +37,27 @@ from datetime import datetime, date, timedelta
 from decimal import Decimal
 
 import mysql.connector
-from kafka import KafkaAdminClient, KafkaProducer
-from kafka.admin import NewTopic
-from kafka.errors import TopicAlreadyExistsError, NoBrokersAvailable
+from kafka import KafkaAdminClient, KafkaConsumer, KafkaProducer
+from kafka.admin import NewTopic, ConfigResource, ConfigResourceType
+from kafka.errors import TopicAlreadyExistsError
+from kafka import TopicPartition
 
 # ─────────────────────────────────────────────────────────────────────────────
-# CLI / ENV config
+# CLI / ENV
 # ─────────────────────────────────────────────────────────────────────────────
 parser = argparse.ArgumentParser(description="MySQL → Kafka Producer")
-parser.add_argument("--kafka-brokers",   default=os.getenv("KAFKA_BROKERS",   "kafka:9092"))
-parser.add_argument("--db-host",         default=os.getenv("DB_HOST",         "mysql"))
-parser.add_argument("--db-port",         type=int, default=int(os.getenv("DB_PORT", "3306")))
-parser.add_argument("--db-user",         default=os.getenv("DB_USER",         "pg_user"))
-parser.add_argument("--db-password",     default=os.getenv("DB_PASSWORD",     "pg_password_2024"))
-parser.add_argument("--db-name",         default=os.getenv("DB_NAME",         "payment_gateway"))
-parser.add_argument("--topic-prefix",    default=os.getenv("TOPIC_PREFIX",    "pg"))
-parser.add_argument("--poll-interval",   type=int, default=int(os.getenv("POLL_INTERVAL", "15")),
-                    help="Seconds between incremental polls (default: 15)")
-parser.add_argument("--batch-size",      type=int, default=int(os.getenv("BATCH_SIZE", "500")),
-                    help="Rows per Kafka send batch (default: 500)")
+parser.add_argument("--kafka-brokers",  default=os.getenv("KAFKA_BROKERS",  "kafka:9092"))
+parser.add_argument("--db-host",        default=os.getenv("DB_HOST",        "mysql"))
+parser.add_argument("--db-port",        type=int, default=int(os.getenv("DB_PORT", "3306")))
+parser.add_argument("--db-user",        default=os.getenv("DB_USER",        "pg_user"))
+parser.add_argument("--db-password",    default=os.getenv("DB_PASSWORD",    "pg_password_2024"))
+parser.add_argument("--db-name",        default=os.getenv("DB_NAME",        "payment_gateway"))
+parser.add_argument("--topic-prefix",   default=os.getenv("TOPIC_PREFIX",   "pg"))
+parser.add_argument("--poll-interval",  type=int, default=int(os.getenv("POLL_INTERVAL", "15")))
+parser.add_argument("--batch-size",     type=int, default=int(os.getenv("BATCH_SIZE",    "500")))
 args = parser.parse_args()
+
+STATE_TOPIC = f"{args.topic_prefix}.__producer_state"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Logging
@@ -76,32 +71,29 @@ log = logging.getLogger("producer")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Table catalogue
-# Each entry:  (table_name, watermark_column, order_column, pk_column)
 # ─────────────────────────────────────────────────────────────────────────────
 TABLES = [
-    ("countries",           "created_at",   "country_id",   "country_id"),
-    ("transaction_types",   None,           "type_id",      "type_id"),
-    ("transaction_statuses",None,           "status_id",    "status_id"),
-    ("card_networks",       None,           "network_id",   "network_id"),
-    ("merchant_categories", None,           "mcc",          "mcc"),
-    ("merchants",           "created_at",   "merchant_id",  "merchant_id"),
-    ("pos_terminals",       "created_at",   "pos_id",       "pos_id"),
-    ("clients",             "created_at",   "client_id",    "client_id"),
-    ("payment_cards",       "created_at",   "card_id",      "card_id"),
-    ("transactions",        "created_at",   "txn_id",       "txn_id"),
-    ("fraud_alerts",        "created_at",   "alert_id",     "alert_id"),
-    ("refunds",             "created_at",   "refund_id",    "refund_id"),
-    ("settlement_batches",  "created_at",   "batch_id",     "batch_id"),
+    ("countries",           "created_at",  "country_id",  "country_id"),
+    ("transaction_types",   None,          "type_id",     "type_id"),
+    ("transaction_statuses",None,          "status_id",   "status_id"),
+    ("card_networks",       None,          "network_id",  "network_id"),
+    ("merchant_categories", None,          "mcc",         "mcc"),
+    ("merchants",           "created_at",  "merchant_id", "merchant_id"),
+    ("pos_terminals",       "created_at",  "pos_id",      "pos_id"),
+    ("clients",             "created_at",  "client_id",   "client_id"),
+    ("payment_cards",       "created_at",  "card_id",     "card_id"),
+    ("transactions",        "created_at",  "txn_id",      "txn_id"),
+    ("fraud_alerts",        "created_at",  "alert_id",    "alert_id"),
+    ("refunds",             "created_at",  "refund_id",   "refund_id"),
+    ("settlement_batches",  "created_at",  "batch_id",    "batch_id"),
 ]
 
 # ─────────────────────────────────────────────────────────────────────────────
-# JSON serialiser — handles Decimal, date, datetime
+# JSON serialiser
 # ─────────────────────────────────────────────────────────────────────────────
 def _json_default(obj):
-    if isinstance(obj, Decimal):
-        return float(obj)
-    if isinstance(obj, (datetime, date)):
-        return obj.isoformat()
+    if isinstance(obj, Decimal):       return float(obj)
+    if isinstance(obj, (datetime, date)): return obj.isoformat()
     raise TypeError(f"Cannot serialise {type(obj)}")
 
 def to_json(payload: dict) -> bytes:
@@ -121,8 +113,7 @@ def row_count(cur, table: str) -> int:
     cur.execute(f"SELECT COUNT(*) FROM `{table}`")
     return cur.fetchone()[0]
 
-def fetch_batch(cur, table: str, order_col: str,
-                offset: int, limit: int) -> list[dict]:
+def fetch_batch(cur, table: str, order_col: str, offset: int, limit: int) -> list[dict]:
     cur.execute(
         f"SELECT * FROM `{table}` ORDER BY `{order_col}` LIMIT %s OFFSET %s",
         (limit, offset)
@@ -145,64 +136,111 @@ def fetch_incremental(cur, table: str, watermark_col: str,
 def topic_name(table: str) -> str:
     return f"{args.topic_prefix}.{table}"
 
-def list_topics() -> set:
-    """Return the set of all existing Kafka topics via KafkaConsumer."""
-    from kafka import KafkaConsumer
-    consumer = KafkaConsumer(
+def ensure_topics(admin: KafkaAdminClient):
+    """Create all data topics + the compacted state topic."""
+    existing = set(KafkaConsumer(
         bootstrap_servers=args.kafka_brokers,
         group_id=None,
         request_timeout_ms=10_000,
-        connections_max_idle_ms=15_000,
-    )
-    topics = consumer.topics()
-    consumer.close()
-    return topics
+    ).topics())
 
-def ensure_topics(admin: KafkaAdminClient, tables: list):
-    existing = list_topics()
     to_create = []
-    for table, *_ in tables:
+
+    # Data topics
+    for table, *_ in TABLES:
         name = topic_name(table)
         if name not in existing:
             to_create.append(NewTopic(
                 name=name,
                 num_partitions=3,
                 replication_factor=1,
-                topic_configs={"retention.ms": str(7 * 24 * 3600 * 1000)},  # 7 days
+                topic_configs={"retention.ms": str(7 * 24 * 3600 * 1000)},
             ))
+
+    # State topic — compacted so only the latest value per key is kept.
+    # This means after a full load completes the marker survives restarts
+    # but is erased when Kafka storage is wiped (docker compose down -v).
+    if STATE_TOPIC not in existing:
+        to_create.append(NewTopic(
+            name=STATE_TOPIC,
+            num_partitions=1,
+            replication_factor=1,
+            topic_configs={
+                "cleanup.policy": "compact",
+                "retention.ms":   "-1",         # keep forever (until compacted away)
+                "min.cleanable.dirty.ratio": "0.01",
+            },
+        ))
+
     if to_create:
         try:
             admin.create_topics(to_create, validate_only=False)
-            log.info("Created %d topics: %s",
-                     len(to_create), [t.name for t in to_create])
+            log.info("Created topics: %s", [t.name for t in to_create])
         except TopicAlreadyExistsError:
             pass
 
-def topic_has_messages(admin: KafkaAdminClient, table: str) -> bool:
-    """Return True if the topic has at least one committed message."""
-    from kafka import KafkaConsumer
-    name = topic_name(table)
-    try:
-        consumer = KafkaConsumer(
-            bootstrap_servers=args.kafka_brokers,
-            group_id=None,
-            enable_auto_commit=False,
-        )
-        partitions = consumer.partitions_for_topic(name) or set()
-        from kafka import TopicPartition
-        tps = [TopicPartition(name, p) for p in partitions]
-        if not tps:
-            consumer.close()
-            return False
-        end_offsets = consumer.end_offsets(tps)
-        consumer.close()
-        return any(v > 0 for v in end_offsets.values())
-    except Exception:
-        return False
+# ─────────────────────────────────────────────────────────────────────────────
+# State topic — read / write completion markers
+# ─────────────────────────────────────────────────────────────────────────────
+def read_completed_tables() -> set[str]:
+    """
+    Read the compacted state topic and return the set of table names
+    whose full load has already been marked as complete.
+    Returns an empty set if the topic is empty (first run or after wipe).
+    """
+    consumer = KafkaConsumer(
+        STATE_TOPIC,
+        bootstrap_servers=args.kafka_brokers,
+        group_id=None,
+        auto_offset_reset="earliest",
+        enable_auto_commit=False,
+        value_deserializer=lambda v: json.loads(v.decode()),
+        consumer_timeout_ms=5_000,   # stop after 5 s of no new messages
+    )
 
+    completed = set()
+    try:
+        for msg in consumer:
+            key   = msg.key.decode() if msg.key else None
+            value = msg.value
+            if key and value and value.get("status") == "completed":
+                completed.add(key)
+            elif key and value and value.get("status") == "reset":
+                completed.discard(key)
+    except Exception:
+        pass
+    finally:
+        consumer.close()
+
+    if completed:
+        log.info("State topic: %d tables already fully loaded: %s",
+                 len(completed), sorted(completed))
+    else:
+        log.info("State topic: no completed tables found — full load required for all tables")
+
+    return completed
+
+
+def mark_table_completed(producer: KafkaProducer, table: str, rows_sent: int):
+    """Write a completion marker for table into the state topic."""
+    payload = {
+        "status":     "completed",
+        "rows":       rows_sent,
+        "completed_at": datetime.utcnow().isoformat(),
+    }
+    producer.send(
+        STATE_TOPIC,
+        key=table.encode(),
+        value=to_json(payload),
+    )
+    producer.flush()
+    log.info("  %-25s state → completed (%d rows)", table, rows_sent)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Publish rows
+# ─────────────────────────────────────────────────────────────────────────────
 def publish_rows(producer: KafkaProducer, table: str,
                  rows: list[dict], op: str = "r") -> int:
-    """Publish a list of row dicts to the topic. Returns count sent."""
     ts_ms = int(time.time() * 1000)
     topic = topic_name(table)
     for row in rows:
@@ -214,22 +252,24 @@ def publish_rows(producer: KafkaProducer, table: str,
 # ─────────────────────────────────────────────────────────────────────────────
 # Phase 1 — Full Load
 # ─────────────────────────────────────────────────────────────────────────────
-def full_load(producer: KafkaProducer, admin: KafkaAdminClient):
+def full_load(producer: KafkaProducer):
     log.info("═══ PHASE 1 — FULL LOAD ═══")
+
+    # Read which tables were already fully loaded in a previous run
+    completed = read_completed_tables()
+
     db  = get_db()
     cur = db.cursor()
 
     for table, watermark_col, order_col, pk_col in TABLES:
-        topic = topic_name(table)
-
-        if topic_has_messages(admin, table):
-            log.info("  %-25s SKIP — topic already has data", table)
+        if table in completed:
+            log.info("  %-25s SKIP — already loaded (state topic marker found)", table)
             continue
 
-        total    = row_count(cur, table)
-        sent     = 0
-        offset   = 0
-        log.info("  %-25s full load  (%d rows) …", table, total)
+        total  = row_count(cur, table)
+        sent   = 0
+        offset = 0
+        log.info("  %-25s full load (%d rows) …", table, total)
 
         while offset < total:
             rows = fetch_batch(cur, table, order_col, offset, args.batch_size)
@@ -240,7 +280,10 @@ def full_load(producer: KafkaProducer, admin: KafkaAdminClient):
             sent   += n
             offset += n
 
-        log.info("  %-25s ✓ %d rows published → %s", table, sent, topic)
+        log.info("  %-25s ✓ %d rows → %s", table, sent, topic_name(table))
+
+        # Write completion marker so restarts skip this table
+        mark_table_completed(producer, table, sent)
 
     cur.close()
     db.close()
@@ -252,8 +295,6 @@ def full_load(producer: KafkaProducer, admin: KafkaAdminClient):
 def incremental_poll(producer: KafkaProducer):
     log.info("═══ PHASE 2 — INCREMENTAL POLL (every %ds) ═══", args.poll_interval)
 
-    # Initialise watermarks: start from (now - 1 minute) to catch any rows
-    # written just before we began.
     watermarks: dict[str, datetime] = {}
     start = datetime.now() - timedelta(minutes=1)
     for table, watermark_col, *_ in TABLES:
@@ -267,9 +308,9 @@ def incremental_poll(producer: KafkaProducer):
         cycle_start = time.time()
         total_new   = 0
 
-        for table, watermark_col, order_col, pk_col in TABLES:
+        for table, watermark_col, order_col, _ in TABLES:
             if not watermark_col:
-                continue   # static reference tables — skip incremental
+                continue
 
             since = watermarks[table]
             rows  = fetch_incremental(cur, table, watermark_col, order_col, since)
@@ -278,59 +319,52 @@ def incremental_poll(producer: KafkaProducer):
                 n = publish_rows(producer, table, rows, op="c")
                 producer.flush()
                 total_new += n
-                # Advance watermark to the latest created_at seen
                 latest = max(
                     r[watermark_col] for r in rows
                     if isinstance(r.get(watermark_col), datetime)
                 )
                 watermarks[table] = latest
-                log.info("  %-25s +%d new rows  (watermark → %s)", table, n, latest)
+                log.info("  %-25s +%d new rows (watermark → %s)", table, n, latest)
 
         if total_new:
-            log.info("  Poll cycle complete — %d new rows published", total_new)
+            log.info("  Poll cycle — %d new rows published", total_new)
         else:
             log.debug("  Poll cycle — no new rows")
 
-        # Reconnect every ~1 hour to avoid stale connections
-        elapsed = time.time() - cycle_start
-        sleep_s = max(0, args.poll_interval - elapsed)
-        time.sleep(sleep_s)
+        time.sleep(max(0, args.poll_interval - (time.time() - cycle_start)))
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Main
 # ─────────────────────────────────────────────────────────────────────────────
 def main():
-    log.info("🔌  Connecting to Kafka broker: %s", args.kafka_brokers)
+    log.info("🔌  Connecting to Kafka: %s", args.kafka_brokers)
 
     admin = KafkaAdminClient(
         bootstrap_servers=args.kafka_brokers,
         client_id="pg-producer-admin",
         request_timeout_ms=15_000,
     )
-
     producer = KafkaProducer(
         bootstrap_servers=args.kafka_brokers,
         client_id="pg-producer",
-        acks="all",                         # wait for all in-sync replicas
+        acks="all",
         retries=5,
         retry_backoff_ms=500,
-        batch_size=65536,                   # 64 KB batch
-        linger_ms=20,                       # slight delay to coalesce messages
+        batch_size=65536,
+        linger_ms=20,
         compression_type="gzip",
-        max_request_size=10 * 1024 * 1024,  # 10 MB
+        max_request_size=10 * 1024 * 1024,
     )
 
-    log.info("🗂️   Ensuring Kafka topics exist …")
-    ensure_topics(admin, TABLES)
+    log.info("🗂️   Ensuring topics exist …")
+    ensure_topics(admin)
 
-    # Phase 1
-    full_load(producer, admin)
+    full_load(producer)
 
-    # Phase 2
     try:
         incremental_poll(producer)
     except KeyboardInterrupt:
-        log.info("\n🛑  Producer stopped.")
+        log.info("🛑  Producer stopped.")
     finally:
         producer.flush()
         producer.close()

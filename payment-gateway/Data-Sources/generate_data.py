@@ -334,8 +334,9 @@ INSERT INTO transactions
    type_id, status_id, amount, currency, fee,
    auth_code, channel, ip_address, device_id,
    is_recurring, is_international, is_flagged,
-   failure_reason, initiated_at, processed_at, settled_at)
-VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+   failure_reason, initiated_at, processed_at, settled_at,
+   created_at)
+VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
 """
 
 # ── Fraud pattern builders ───────────────────────────────────────────────────
@@ -383,6 +384,7 @@ def make_txn_row(
         auth_code, channel, ip, dev,
         is_recurring, is_international, is_flagged,
         failure_reason, initiated_at, proc_at, settled,
+        initiated_at,   # created_at = initiated_at
     )
 
 
