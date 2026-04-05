@@ -1,0 +1,33 @@
+version: 2
+
+sources:
+  - name: payment_gateway
+    database: payment_gateway
+    schema: payment_gateway
+    tables:
+      - name: transactions
+        description: Core financial events — all channels and statuses
+      - name: clients
+        description: Registered cardholders
+      - name: merchants
+        description: Registered businesses
+      - name: payment_cards
+        description: Tokenised card instruments
+      - name: pos_terminals
+        description: Physical and virtual payment terminals
+      - name: fraud_alerts
+        description: Fraud detection rules triggered per transaction
+      - name: refunds
+        description: Refund and chargeback records
+      - name: settlement_batches
+        description: Daily merchant payout aggregates
+      - name: transaction_statuses
+        description: Status lookup table
+      - name: transaction_types
+        description: Type lookup table
+      - name: card_networks
+        description: Card network lookup table
+      - name: countries
+        description: Country lookup table
+      - name: merchant_categories
+        description: ISO MCC codes

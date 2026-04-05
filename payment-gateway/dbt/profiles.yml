@@ -1,0 +1,12 @@
+payment_gateway:
+  target: dev
+  outputs:
+    dev:
+      type: mysql
+      server: "{{ env_var('DB_HOST', 'mysql') }}"
+      port: "{{ env_var('DB_PORT', '3306') | int }}"
+      database: "{{ env_var('DB_NAME', 'payment_gateway') }}"
+      schema: "{{ env_var('DB_NAME', 'payment_gateway') }}"
+      username: "{{ env_var('DB_USER', 'pg_user') }}"
+      password: "{{ env_var('DB_PASSWORD', 'pg_password_2024') }}"
+      ssl_disabled: true

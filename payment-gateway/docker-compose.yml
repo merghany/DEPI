@@ -12,14 +12,6 @@ x-kafka-env: &kafka-env
   KAFKA_HOST:    kafka
   KAFKA_PORT:    "9092"
   TOPIC_PREFIX:  cdc
-  CDC_MODE:      "true"
-
-x-minio-env: &minio-env
-  MINIO_ENDPOINT:      minio:9000
-  MINIO_API_PORT:      "9000"
-  MINIO_ROOT_USER:     ${MINIO_ROOT_USER}
-  MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
-  MINIO_BUCKET:        payment-gateway
 
 x-python-base: &python-base
   build:
@@ -303,60 +295,165 @@ services:
     networks:
       - payment_net
 
-  # ── 8. Kafka Consumer  (Debezium CDC → MinIO Parquet) ────────
-  kafka_consumer:
+  # ── 8. Kafka → dbt  (CDC events trigger dbt runs directly) ──
+  kafka_to_dbt:
     <<: *pipeline-base
-    container_name: kafka_consumer
+    container_name: kafka_to_dbt
     restart: on-failure
     environment:
-      <<: [*kafka-env, *minio-env, *db-env]
-      WAIT_FOR:            "kafka,minio"
-      KAFKA_GROUP_ID:      "pg-minio-consumer"
-      FLUSH_ROWS:          "100"
-      FLUSH_SECONDS:       "10"
-      PARQUET_COMPRESSION: "snappy"
-      SKIP_DELETES:        "true"
+      <<: [*kafka-env, *db-env]
+      WAIT_FOR:         "kafka,mysql"
+      KAFKA_GROUP_ID:   "pg-dbt-trigger"
+      TRIGGER_ROWS:     "500"
+      TRIGGER_SECONDS:  "60"
+      RUN_TESTS:        "false"
+      DBT_PROJECT_DIR:  "/app/dbt"
+      DBT_PROFILES_DIR: "/app/dbt"
     depends_on:
       kafka:
         condition: service_healthy
-      minio:
+      mysql:
         condition: service_healthy
       debezium-register:
         condition: service_completed_successfully
+    volumes:
+      - ./dbt:/app/dbt
     command:
       - python
-      - kafka_consumer.py
+      - kafka_to_dbt.py
 
-  # ── 10. MinIO ─────────────────────────────────────────────────
-  minio:
-    image: minio/minio:latest
-    container_name: minio
-    restart: unless-stopped
+  # ── PostgreSQL ─────────────────────────────────────────────────
+  # Hosts TWO databases:
+  #   ${POSTGRES_DB}  — Airflow metadata (created via env var)
+  #   analytics       — dbt mart tables (created via init script)
+  postgres:
+    image: postgres
+    container_name: airflow-postgres
+    restart: always
     environment:
-      MINIO_ROOT_USER:     ${MINIO_ROOT_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
-    command: server /data --console-address ":9001"
-    ports:
-      - "9001:9001"
-      - "9002:9000"
+      POSTGRES_USER:     ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB:       ${POSTGRES_DB}
     volumes:
-      - minio_data:/data
+      - postgres_data:/var/lib/postgresql
+      - ./postgres-init:/docker-entrypoint-initdb.d  # creates analytics DB + mart tables
+    ports:
+      - "5432:5432"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
-      timeout:  5s
-      retries:  5
-      start_period: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     networks:
       - payment_net
 
+  # ── Airflow Init ──────────────────────────────────────────────
+  airflow-init:
+    build:
+      context: .
+      dockerfile: Pipeline/Dockerfile.airflow
+    image: payment-gateway-airflow:latest
+    container_name: airflow-init
+    restart: "no"
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - "sleep 10 && airflow db init && airflow db migrate && airflow users create --username $${AIRFLOW_ADMIN_USER} --firstname $${AIRFLOW_ADMIN_FIRSTNAME} --lastname $${AIRFLOW_ADMIN_LASTNAME} --role Admin --email $${AIRFLOW_ADMIN_EMAIL} --password $${AIRFLOW_ADMIN_PASSWORD}"
+    networks:
+      - payment_net
+
+  # ── Airflow Scheduler ─────────────────────────────────────────
+  airflow-scheduler:
+    image: payment-gateway-airflow:latest
+    container_name: airflow-scheduler
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+    environment:
+      AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      ANALYTICS_DB_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/analytics
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./plugins:/opt/airflow/plugins
+      - ./dbt:/opt/airflow/dbt
+    command: scheduler
+    networks:
+      - payment_net
+
+  # ── Airflow Webserver ─────────────────────────────────────────
+  airflow-webserver:
+    image: payment-gateway-airflow:latest
+    container_name: airflow-webserver
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+      airflow-scheduler:
+        condition: service_started
+    environment:
+      AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./plugins:/opt/airflow/plugins
+      - ./dbt:/opt/airflow/dbt
+    ports:
+      - "8082:8080"
+    command: webserver
+    networks:
+      - payment_net
+  metabase:
+    image: metabase/metabase:v0.60.x
+    container_name: telecom_metabase
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      MB_DB_TYPE:       postgres
+      MB_DB_HOST:       postgres
+      MB_DB_PORT:       5432
+      MB_DB_DBNAME:     analytics
+      MB_DB_USER:       dbt_user
+      MB_DB_PASS:       dbt_password
+      JAVA_TIMEZONE:    UTC
+      MB_EMOJI_IN_LOGS: "false"
+    volumes:
+      - metabase_data:/metabase-data
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - payment_net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 120s
 
 volumes:
-  minio_data:
+  postgres_data:
     driver: local
   mysql_data:
     driver: local
-
+  metabase_data:
+    driver: local
 networks:
   payment_net:
     driver: bridge

@@ -1,0 +1,25 @@
+FROM python:3.11-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    bash \
+    gcc \
+    pkg-config \
+    default-libmysqlclient-dev \
+    git \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /dbt
+
+# dbt-core + MySQL adapter
+RUN pip install --no-cache-dir \
+    "dbt-core>=1.7.0" \
+    "dbt-mysql>=1.7.0" \
+    "mysqlclient"
+
+# Copy the dbt project
+COPY dbt/ .
+
+# Default command: run all models
+# Override in docker-compose command: to run specific models or tests
+CMD ["dbt", "run", "--profiles-dir", "/dbt", "--project-dir", "/dbt"]

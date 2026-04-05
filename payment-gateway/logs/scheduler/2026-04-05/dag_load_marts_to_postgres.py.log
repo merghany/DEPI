@@ -1,0 +1,123 @@
+[2026-04-05T11:30:10.214+0000] {processor.py:161} INFO - Started process (PID=21) to work on /opt/airflow/dags/dag_load_marts_to_postgres.py
+[2026-04-05T11:30:10.224+0000] {processor.py:830} INFO - Processing file /opt/airflow/dags/dag_load_marts_to_postgres.py for tasks to queue
+[2026-04-05T11:30:10.236+0000] {logging_mixin.py:188} INFO - [2026-04-05T11:30:10.235+0000] {dagbag.py:545} INFO - Filling up the DagBag from /opt/airflow/dags/dag_load_marts_to_postgres.py
+[2026-04-05T11:30:10.472+0000] {processor.py:840} INFO - DAG(s) 'load_marts_to_postgres' retrieved from /opt/airflow/dags/dag_load_marts_to_postgres.py
+[2026-04-05T11:30:12.372+0000] {logging_mixin.py:188} INFO - [2026-04-05T11:30:12.371+0000] {override.py:1858} INFO - Created Permission View: can read on DAG:load_marts_to_postgres
+[2026-04-05T11:30:12.485+0000] {logging_mixin.py:188} INFO - [2026-04-05T11:30:12.484+0000] {override.py:1858} INFO - Created Permission View: can delete on DAG:load_marts_to_postgres
+[2026-04-05T11:30:12.542+0000] {logging_mixin.py:188} INFO - [2026-04-05T11:30:12.541+0000] {override.py:1858} INFO - Created Permission View: can edit on DAG:load_marts_to_postgres
+[2026-04-05T11:30:12.544+0000] {logging_mixin.py:188} INFO - [2026-04-05T11:30:12.544+0000] {dag.py:3089} INFO - Sync 1 DAGs
+[2026-04-05T11:30:12.613+0000] {logging_mixin.py:188} INFO - [2026-04-05T11:30:12.612+0000] {dag.py:3111} INFO - Creating ORM DAG for load_marts_to_postgres
+[2026-04-05T11:30:12.703+0000] {logging_mixin.py:188} INFO - [2026-04-05T11:30:12.701+0000] {dag.py:3947} INFO - Setting next_dagrun for load_marts_to_postgres to 2026-04-04 03:00:00+00:00, run_after=2026-04-05 03:00:00+00:00
+[2026-04-05T11:30:12.876+0000] {processor.py:183} INFO - Processing /opt/airflow/dags/dag_load_marts_to_postgres.py took 2.701 seconds
+[2026-04-05T11:30:43.147+0000] {processor.py:161} INFO - Started process (PID=25) to work on /opt/airflow/dags/dag_load_marts_to_postgres.py
+[2026-04-05T11:30:43.149+0000] {processor.py:830} INFO - Processing file /opt/airflow/dags/dag_load_marts_to_postgres.py for tasks to queue
+[2026-04-05T11:30:43.157+0000] {logging_mixin.py:188} INFO - [2026-04-05T11:30:43.156+0000] {dagbag.py:545} INFO - Filling up the DagBag from /opt/airflow/dags/dag_load_marts_to_postgres.py
+[2026-04-05T11:30:43.281+0000] {processor.py:840} INFO - DAG(s) 'load_marts_to_postgres' retrieved from /opt/airflow/dags/dag_load_marts_to_postgres.py
+[2026-04-05T11:30:43.898+0000] {logging_mixin.py:188} INFO - [2026-04-05T11:30:43.897+0000] {dag.py:3089} INFO - Sync 1 DAGs
+[2026-04-05T11:30:44.009+0000] {logging_mixin.py:188} INFO - [2026-04-05T11:30:44.009+0000] {dag.py:3947} INFO - Setting next_dagrun for load_marts_to_postgres to 2026-04-04 03:00:00+00:00, run_after=2026-04-05 03:00:00+00:00
+[2026-04-05T11:30:44.327+0000] {processor.py:183} INFO - Processing /opt/airflow/dags/dag_load_marts_to_postgres.py took 1.227 seconds
+[2026-04-05T11:31:14.968+0000] {processor.py:161} INFO - Started process (PID=29) to work on /opt/airflow/dags/dag_load_marts_to_postgres.py
+[2026-04-05T11:31:14.996+0000] {processor.py:830} INFO - Processing file /opt/airflow/dags/dag_load_marts_to_postgres.py for tasks to queue
+[2026-04-05T11:31:15.018+0000] {logging_mixin.py:188} INFO - [2026-04-05T11:31:15.017+0000] {dagbag.py:545} INFO - Filling up the DagBag from /opt/airflow/dags/dag_load_marts_to_postgres.py
+[2026-04-05T11:31:15.266+0000] {processor.py:840} INFO - DAG(s) 'load_marts_to_postgres' retrieved from /opt/airflow/dags/dag_load_marts_to_postgres.py
+[2026-04-05T11:31:15.782+0000] {logging_mixin.py:188} INFO - [2026-04-05T11:31:15.782+0000] {dag.py:3089} INFO - Sync 1 DAGs
+[2026-04-05T11:31:16.157+0000] {logging_mixin.py:188} INFO - [2026-04-05T11:31:16.134+0000] {dag.py:3947} INFO - Setting next_dagrun for load_marts_to_postgres to 2026-04-04 03:00:00+00:00, run_after=2026-04-05 03:00:00+00:00
+[2026-04-05T11:31:16.625+0000] {processor.py:183} INFO - Processing /opt/airflow/dags/dag_load_marts_to_postgres.py took 1.702 seconds
+[2026-04-05T11:31:47.933+0000] {processor.py:161} INFO - Started process (PID=33) to work on /opt/airflow/dags/dag_load_marts_to_postgres.py
+[2026-04-05T11:31:47.946+0000] {processor.py:830} INFO - Processing file /opt/airflow/dags/dag_load_marts_to_postgres.py for tasks to queue
+[2026-04-05T11:31:47.974+0000] {logging_mixin.py:188} INFO - [2026-04-05T11:31:47.973+0000] {dagbag.py:545} INFO - Filling up the DagBag from /opt/airflow/dags/dag_load_marts_to_postgres.py
+[2026-04-05T11:31:48.313+0000] {processor.py:840} INFO - DAG(s) 'load_marts_to_postgres' retrieved from /opt/airflow/dags/dag_load_marts_to_postgres.py
+[2026-04-05T11:31:49.193+0000] {logging_mixin.py:188} INFO - [2026-04-05T11:31:49.193+0000] {dag.py:3089} INFO - Sync 1 DAGs
+[2026-04-05T11:31:49.558+0000] {logging_mixin.py:188} INFO - [2026-04-05T11:31:49.556+0000] {dag.py:3947} INFO - Setting next_dagrun for load_marts_to_postgres to 2026-04-04 03:00:00+00:00, run_after=2026-04-05 03:00:00+00:00
+[2026-04-05T11:31:49.706+0000] {processor.py:183} INFO - Processing /opt/airflow/dags/dag_load_marts_to_postgres.py took 1.829 seconds
+[2026-04-05T11:32:20.190+0000] {processor.py:161} INFO - Started process (PID=37) to work on /opt/airflow/dags/dag_load_marts_to_postgres.py
+[2026-04-05T11:32:20.195+0000] {processor.py:830} INFO - Processing file /opt/airflow/dags/dag_load_marts_to_postgres.py for tasks to queue
+[2026-04-05T11:32:20.207+0000] {logging_mixin.py:188} INFO - [2026-04-05T11:32:20.203+0000] {dagbag.py:545} INFO - Filling up the DagBag from /opt/airflow/dags/dag_load_marts_to_postgres.py
+[2026-04-05T11:32:20.297+0000] {processor.py:840} INFO - DAG(s) 'load_marts_to_postgres' retrieved from /opt/airflow/dags/dag_load_marts_to_postgres.py
+[2026-04-05T11:32:20.430+0000] {logging_mixin.py:188} INFO - [2026-04-05T11:32:20.430+0000] {dag.py:3089} INFO - Sync 1 DAGs
+[2026-04-05T11:32:20.546+0000] {logging_mixin.py:188} INFO - [2026-04-05T11:32:20.546+0000] {dag.py:3947} INFO - Setting next_dagrun for load_marts_to_postgres to 2026-04-04 03:00:00+00:00, run_after=2026-04-05 03:00:00+00:00
+[2026-04-05T11:32:20.641+0000] {processor.py:183} INFO - Processing /opt/airflow/dags/dag_load_marts_to_postgres.py took 0.488 seconds
+[2026-04-05T11:32:51.064+0000] {processor.py:161} INFO - Started process (PID=41) to work on /opt/airflow/dags/dag_load_marts_to_postgres.py
+[2026-04-05T11:32:51.068+0000] {processor.py:830} INFO - Processing file /opt/airflow/dags/dag_load_marts_to_postgres.py for tasks to queue
+[2026-04-05T11:32:51.082+0000] {logging_mixin.py:188} INFO - [2026-04-05T11:32:51.081+0000] {dagbag.py:545} INFO - Filling up the DagBag from /opt/airflow/dags/dag_load_marts_to_postgres.py
+[2026-04-05T11:32:51.322+0000] {processor.py:840} INFO - DAG(s) 'load_marts_to_postgres' retrieved from /opt/airflow/dags/dag_load_marts_to_postgres.py
+[2026-04-05T11:32:51.664+0000] {logging_mixin.py:188} INFO - [2026-04-05T11:32:51.664+0000] {dag.py:3089} INFO - Sync 1 DAGs
+[2026-04-05T11:32:52.001+0000] {logging_mixin.py:188} INFO - [2026-04-05T11:32:51.998+0000] {dag.py:3947} INFO - Setting next_dagrun for load_marts_to_postgres to 2026-04-04 03:00:00+00:00, run_after=2026-04-05 03:00:00+00:00
+[2026-04-05T11:32:52.334+0000] {processor.py:183} INFO - Processing /opt/airflow/dags/dag_load_marts_to_postgres.py took 1.357 seconds
+[2026-04-05T11:33:23.038+0000] {processor.py:161} INFO - Started process (PID=45) to work on /opt/airflow/dags/dag_load_marts_to_postgres.py
+[2026-04-05T11:33:23.044+0000] {processor.py:830} INFO - Processing file /opt/airflow/dags/dag_load_marts_to_postgres.py for tasks to queue
+[2026-04-05T11:33:23.057+0000] {logging_mixin.py:188} INFO - [2026-04-05T11:33:23.056+0000] {dagbag.py:545} INFO - Filling up the DagBag from /opt/airflow/dags/dag_load_marts_to_postgres.py
+[2026-04-05T11:33:23.135+0000] {processor.py:840} INFO - DAG(s) 'load_marts_to_postgres' retrieved from /opt/airflow/dags/dag_load_marts_to_postgres.py
+[2026-04-05T11:33:23.371+0000] {logging_mixin.py:188} INFO - [2026-04-05T11:33:23.371+0000] {dag.py:3089} INFO - Sync 1 DAGs
+[2026-04-05T11:33:23.892+0000] {logging_mixin.py:188} INFO - [2026-04-05T11:33:23.888+0000] {dag.py:3947} INFO - Setting next_dagrun for load_marts_to_postgres to 2026-04-04 03:00:00+00:00, run_after=2026-04-05 03:00:00+00:00
+[2026-04-05T11:33:23.976+0000] {processor.py:183} INFO - Processing /opt/airflow/dags/dag_load_marts_to_postgres.py took 0.965 seconds
+[2026-04-05T11:33:54.462+0000] {processor.py:161} INFO - Started process (PID=49) to work on /opt/airflow/dags/dag_load_marts_to_postgres.py
+[2026-04-05T11:33:54.464+0000] {processor.py:830} INFO - Processing file /opt/airflow/dags/dag_load_marts_to_postgres.py for tasks to queue
+[2026-04-05T11:33:54.468+0000] {logging_mixin.py:188} INFO - [2026-04-05T11:33:54.467+0000] {dagbag.py:545} INFO - Filling up the DagBag from /opt/airflow/dags/dag_load_marts_to_postgres.py
+[2026-04-05T11:33:54.520+0000] {processor.py:840} INFO - DAG(s) 'load_marts_to_postgres' retrieved from /opt/airflow/dags/dag_load_marts_to_postgres.py
+[2026-04-05T11:33:54.632+0000] {logging_mixin.py:188} INFO - [2026-04-05T11:33:54.631+0000] {dag.py:3089} INFO - Sync 1 DAGs
+[2026-04-05T11:33:54.755+0000] {logging_mixin.py:188} INFO - [2026-04-05T11:33:54.754+0000] {dag.py:3947} INFO - Setting next_dagrun for load_marts_to_postgres to 2026-04-04 03:00:00+00:00, run_after=2026-04-05 03:00:00+00:00
+[2026-04-05T11:33:54.812+0000] {processor.py:183} INFO - Processing /opt/airflow/dags/dag_load_marts_to_postgres.py took 0.361 seconds
+[2026-04-05T11:34:24.914+0000] {processor.py:161} INFO - Started process (PID=53) to work on /opt/airflow/dags/dag_load_marts_to_postgres.py
+[2026-04-05T11:34:24.916+0000] {processor.py:830} INFO - Processing file /opt/airflow/dags/dag_load_marts_to_postgres.py for tasks to queue
+[2026-04-05T11:34:24.921+0000] {logging_mixin.py:188} INFO - [2026-04-05T11:34:24.921+0000] {dagbag.py:545} INFO - Filling up the DagBag from /opt/airflow/dags/dag_load_marts_to_postgres.py
+[2026-04-05T11:34:24.970+0000] {processor.py:840} INFO - DAG(s) 'load_marts_to_postgres' retrieved from /opt/airflow/dags/dag_load_marts_to_postgres.py
+[2026-04-05T11:34:25.051+0000] {logging_mixin.py:188} INFO - [2026-04-05T11:34:25.051+0000] {dag.py:3089} INFO - Sync 1 DAGs
+[2026-04-05T11:34:25.108+0000] {logging_mixin.py:188} INFO - [2026-04-05T11:34:25.108+0000] {dag.py:3947} INFO - Setting next_dagrun for load_marts_to_postgres to 2026-04-04 03:00:00+00:00, run_after=2026-04-05 03:00:00+00:00
+[2026-04-05T11:34:25.194+0000] {processor.py:183} INFO - Processing /opt/airflow/dags/dag_load_marts_to_postgres.py took 0.295 seconds
+[2026-04-05T11:34:55.322+0000] {processor.py:161} INFO - Started process (PID=57) to work on /opt/airflow/dags/dag_load_marts_to_postgres.py
+[2026-04-05T11:34:55.324+0000] {processor.py:830} INFO - Processing file /opt/airflow/dags/dag_load_marts_to_postgres.py for tasks to queue
+[2026-04-05T11:34:55.326+0000] {logging_mixin.py:188} INFO - [2026-04-05T11:34:55.326+0000] {dagbag.py:545} INFO - Filling up the DagBag from /opt/airflow/dags/dag_load_marts_to_postgres.py
+[2026-04-05T11:34:55.379+0000] {processor.py:840} INFO - DAG(s) 'load_marts_to_postgres' retrieved from /opt/airflow/dags/dag_load_marts_to_postgres.py
+[2026-04-05T11:34:55.486+0000] {logging_mixin.py:188} INFO - [2026-04-05T11:34:55.486+0000] {dag.py:3089} INFO - Sync 1 DAGs
+[2026-04-05T11:34:55.530+0000] {logging_mixin.py:188} INFO - [2026-04-05T11:34:55.530+0000] {dag.py:3947} INFO - Setting next_dagrun for load_marts_to_postgres to 2026-04-04 03:00:00+00:00, run_after=2026-04-05 03:00:00+00:00
+[2026-04-05T11:34:55.595+0000] {processor.py:183} INFO - Processing /opt/airflow/dags/dag_load_marts_to_postgres.py took 0.284 seconds
+[2026-04-05T11:35:26.464+0000] {processor.py:161} INFO - Started process (PID=61) to work on /opt/airflow/dags/dag_load_marts_to_postgres.py
+[2026-04-05T11:35:26.560+0000] {processor.py:830} INFO - Processing file /opt/airflow/dags/dag_load_marts_to_postgres.py for tasks to queue
+[2026-04-05T11:35:26.564+0000] {logging_mixin.py:188} INFO - [2026-04-05T11:35:26.563+0000] {dagbag.py:545} INFO - Filling up the DagBag from /opt/airflow/dags/dag_load_marts_to_postgres.py
+[2026-04-05T11:35:26.602+0000] {processor.py:840} INFO - DAG(s) 'load_marts_to_postgres' retrieved from /opt/airflow/dags/dag_load_marts_to_postgres.py
+[2026-04-05T11:35:26.697+0000] {logging_mixin.py:188} INFO - [2026-04-05T11:35:26.697+0000] {dag.py:3089} INFO - Sync 1 DAGs
+[2026-04-05T11:35:26.749+0000] {logging_mixin.py:188} INFO - [2026-04-05T11:35:26.749+0000] {dag.py:3947} INFO - Setting next_dagrun for load_marts_to_postgres to 2026-04-04 03:00:00+00:00, run_after=2026-04-05 03:00:00+00:00
+[2026-04-05T11:35:26.906+0000] {processor.py:183} INFO - Processing /opt/airflow/dags/dag_load_marts_to_postgres.py took 0.461 seconds
+[2026-04-05T11:35:57.755+0000] {processor.py:161} INFO - Started process (PID=65) to work on /opt/airflow/dags/dag_load_marts_to_postgres.py
+[2026-04-05T11:35:57.757+0000] {processor.py:830} INFO - Processing file /opt/airflow/dags/dag_load_marts_to_postgres.py for tasks to queue
+[2026-04-05T11:35:57.762+0000] {logging_mixin.py:188} INFO - [2026-04-05T11:35:57.761+0000] {dagbag.py:545} INFO - Filling up the DagBag from /opt/airflow/dags/dag_load_marts_to_postgres.py
+[2026-04-05T11:35:57.924+0000] {processor.py:840} INFO - DAG(s) 'load_marts_to_postgres' retrieved from /opt/airflow/dags/dag_load_marts_to_postgres.py
+[2026-04-05T11:35:58.269+0000] {logging_mixin.py:188} INFO - [2026-04-05T11:35:58.268+0000] {dag.py:3089} INFO - Sync 1 DAGs
+[2026-04-05T11:35:58.414+0000] {logging_mixin.py:188} INFO - [2026-04-05T11:35:58.413+0000] {dag.py:3947} INFO - Setting next_dagrun for load_marts_to_postgres to 2026-04-04 03:00:00+00:00, run_after=2026-04-05 03:00:00+00:00
+[2026-04-05T11:35:58.540+0000] {processor.py:183} INFO - Processing /opt/airflow/dags/dag_load_marts_to_postgres.py took 0.827 seconds
+[2026-04-05T11:36:29.726+0000] {processor.py:161} INFO - Started process (PID=69) to work on /opt/airflow/dags/dag_load_marts_to_postgres.py
+[2026-04-05T11:36:29.732+0000] {processor.py:830} INFO - Processing file /opt/airflow/dags/dag_load_marts_to_postgres.py for tasks to queue
+[2026-04-05T11:36:29.747+0000] {logging_mixin.py:188} INFO - [2026-04-05T11:36:29.737+0000] {dagbag.py:545} INFO - Filling up the DagBag from /opt/airflow/dags/dag_load_marts_to_postgres.py
+[2026-04-05T11:36:29.943+0000] {processor.py:840} INFO - DAG(s) 'load_marts_to_postgres' retrieved from /opt/airflow/dags/dag_load_marts_to_postgres.py
+[2026-04-05T11:36:30.400+0000] {logging_mixin.py:188} INFO - [2026-04-05T11:36:30.400+0000] {dag.py:3089} INFO - Sync 1 DAGs
+[2026-04-05T11:36:30.860+0000] {logging_mixin.py:188} INFO - [2026-04-05T11:36:30.859+0000] {dag.py:3947} INFO - Setting next_dagrun for load_marts_to_postgres to 2026-04-04 03:00:00+00:00, run_after=2026-04-05 03:00:00+00:00
+[2026-04-05T11:36:31.142+0000] {processor.py:183} INFO - Processing /opt/airflow/dags/dag_load_marts_to_postgres.py took 1.456 seconds
+[2026-04-05T11:37:01.592+0000] {processor.py:161} INFO - Started process (PID=73) to work on /opt/airflow/dags/dag_load_marts_to_postgres.py
+[2026-04-05T11:37:01.597+0000] {processor.py:830} INFO - Processing file /opt/airflow/dags/dag_load_marts_to_postgres.py for tasks to queue
+[2026-04-05T11:37:01.631+0000] {logging_mixin.py:188} INFO - [2026-04-05T11:37:01.630+0000] {dagbag.py:545} INFO - Filling up the DagBag from /opt/airflow/dags/dag_load_marts_to_postgres.py
+[2026-04-05T11:37:01.963+0000] {processor.py:840} INFO - DAG(s) 'load_marts_to_postgres' retrieved from /opt/airflow/dags/dag_load_marts_to_postgres.py
+[2026-04-05T11:37:02.146+0000] {logging_mixin.py:188} INFO - [2026-04-05T11:37:02.146+0000] {dag.py:3089} INFO - Sync 1 DAGs
+[2026-04-05T11:37:02.316+0000] {logging_mixin.py:188} INFO - [2026-04-05T11:37:02.314+0000] {dag.py:3947} INFO - Setting next_dagrun for load_marts_to_postgres to 2026-04-04 03:00:00+00:00, run_after=2026-04-05 03:00:00+00:00
+[2026-04-05T11:37:02.414+0000] {processor.py:183} INFO - Processing /opt/airflow/dags/dag_load_marts_to_postgres.py took 0.891 seconds
+[2026-04-05T11:37:32.549+0000] {processor.py:161} INFO - Started process (PID=77) to work on /opt/airflow/dags/dag_load_marts_to_postgres.py
+[2026-04-05T11:37:32.553+0000] {processor.py:830} INFO - Processing file /opt/airflow/dags/dag_load_marts_to_postgres.py for tasks to queue
+[2026-04-05T11:37:32.559+0000] {logging_mixin.py:188} INFO - [2026-04-05T11:37:32.559+0000] {dagbag.py:545} INFO - Filling up the DagBag from /opt/airflow/dags/dag_load_marts_to_postgres.py
+[2026-04-05T11:37:32.600+0000] {processor.py:840} INFO - DAG(s) 'load_marts_to_postgres' retrieved from /opt/airflow/dags/dag_load_marts_to_postgres.py
+[2026-04-05T11:37:32.670+0000] {logging_mixin.py:188} INFO - [2026-04-05T11:37:32.670+0000] {dag.py:3089} INFO - Sync 1 DAGs
+[2026-04-05T11:37:32.840+0000] {logging_mixin.py:188} INFO - [2026-04-05T11:37:32.839+0000] {dag.py:3947} INFO - Setting next_dagrun for load_marts_to_postgres to 2026-04-04 03:00:00+00:00, run_after=2026-04-05 03:00:00+00:00
+[2026-04-05T11:37:32.908+0000] {processor.py:183} INFO - Processing /opt/airflow/dags/dag_load_marts_to_postgres.py took 0.370 seconds
+[2026-04-05T11:38:03.184+0000] {processor.py:161} INFO - Started process (PID=81) to work on /opt/airflow/dags/dag_load_marts_to_postgres.py
+[2026-04-05T11:38:03.187+0000] {processor.py:830} INFO - Processing file /opt/airflow/dags/dag_load_marts_to_postgres.py for tasks to queue
+[2026-04-05T11:38:03.193+0000] {logging_mixin.py:188} INFO - [2026-04-05T11:38:03.192+0000] {dagbag.py:545} INFO - Filling up the DagBag from /opt/airflow/dags/dag_load_marts_to_postgres.py
+[2026-04-05T11:38:03.257+0000] {processor.py:840} INFO - DAG(s) 'load_marts_to_postgres' retrieved from /opt/airflow/dags/dag_load_marts_to_postgres.py
+[2026-04-05T11:38:03.363+0000] {logging_mixin.py:188} INFO - [2026-04-05T11:38:03.362+0000] {dag.py:3089} INFO - Sync 1 DAGs
+[2026-04-05T11:38:03.434+0000] {logging_mixin.py:188} INFO - [2026-04-05T11:38:03.434+0000] {dag.py:3947} INFO - Setting next_dagrun for load_marts_to_postgres to 2026-04-04 03:00:00+00:00, run_after=2026-04-05 03:00:00+00:00
+[2026-04-05T11:38:03.493+0000] {processor.py:183} INFO - Processing /opt/airflow/dags/dag_load_marts_to_postgres.py took 0.330 seconds
+[2026-04-05T11:38:33.633+0000] {processor.py:161} INFO - Started process (PID=85) to work on /opt/airflow/dags/dag_load_marts_to_postgres.py
+[2026-04-05T11:38:33.635+0000] {processor.py:830} INFO - Processing file /opt/airflow/dags/dag_load_marts_to_postgres.py for tasks to queue
+[2026-04-05T11:38:33.641+0000] {logging_mixin.py:188} INFO - [2026-04-05T11:38:33.639+0000] {dagbag.py:545} INFO - Filling up the DagBag from /opt/airflow/dags/dag_load_marts_to_postgres.py
+[2026-04-05T11:38:33.690+0000] {processor.py:840} INFO - DAG(s) 'load_marts_to_postgres' retrieved from /opt/airflow/dags/dag_load_marts_to_postgres.py
+[2026-04-05T11:38:33.788+0000] {logging_mixin.py:188} INFO - [2026-04-05T11:38:33.787+0000] {dag.py:3089} INFO - Sync 1 DAGs
+[2026-04-05T11:38:33.852+0000] {logging_mixin.py:188} INFO - [2026-04-05T11:38:33.851+0000] {dag.py:3947} INFO - Setting next_dagrun for load_marts_to_postgres to 2026-04-04 03:00:00+00:00, run_after=2026-04-05 03:00:00+00:00
+[2026-04-05T11:38:33.897+0000] {processor.py:183} INFO - Processing /opt/airflow/dags/dag_load_marts_to_postgres.py took 0.276 seconds

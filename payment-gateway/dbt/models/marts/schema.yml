@@ -1,0 +1,38 @@
+version: 2
+
+models:
+  - name: mart_daily_transaction_summary
+    description: Daily transaction volume, revenue, and fraud metrics by status, channel and currency
+    columns:
+      - name: txn_date
+        description: Calendar date of the transactions
+      - name: txn_count
+        description: Total number of transactions on that day
+        tests:
+          - not_null
+      - name: fraud_rate_pct
+        description: Percentage of flagged transactions
+
+  - name: mart_merchant_performance
+    description: Merchant-level KPIs — revenue, volume, and fraud rate
+    columns:
+      - name: merchant_id
+        tests: [not_null, unique]
+      - name: gross_revenue
+        description: Sum of all approved transaction amounts
+
+  - name: mart_client_360
+    description: Full client profile with spend, risk, and fraud statistics
+    columns:
+      - name: client_id
+        tests: [not_null, unique]
+      - name: risk_score
+        description: Internal risk rating 1-100
+
+  - name: mart_fraud_analysis
+    description: Fraud alerts joined with transaction and client context
+    columns:
+      - name: alert_id
+        tests: [not_null, unique]
+      - name: alert_outcome
+        description: Confirmed Fraud | False Positive | Pending Review

@@ -1,0 +1,28 @@
+# Custom Airflow image with dbt-mysql, psycopg2, and pandas pre-installed
+FROM apache/airflow:2.9.3
+
+USER root
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    pkg-config \
+    default-libmysqlclient-dev \
+    libpq-dev \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+USER airflow
+
+USER airflow
+ 
+# Install ONLY what Airflow 2.9.3 does not already include.
+# Do NOT pin provider versions — the base image pins them internally.
+# Do NOT install apache-airflow itself — already in the base image.
+RUN pip install --no-cache-dir \
+    "dbt-core==1.7.9" \
+    "dbt-mysql==1.7.0" \
+    "mysqlclient==2.2.4" \
+    "psycopg2-binary==2.9.9" \
+    "pandas==2.1.4" \
+    "SQLAlchemy==1.4.52"
+ 

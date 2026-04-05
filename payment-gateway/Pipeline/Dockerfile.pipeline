@@ -1,21 +1,31 @@
 FROM python:3.11-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc pkg-config curl \
+    bash \
+    gcc \
+    pkg-config \
+    default-libmysqlclient-dev \
+    curl \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
 RUN pip install --no-cache-dir \
     "mysql-connector-python" \
-    "kafka-python-ng>=2.2.3" \
-    "minio" \
-    "pyarrow>=14.0.0" \
+    "kafka-python-ng" \
+    "dbt-core" \
+    "dbt-mysql" \
+    "mysqlclient" \
     "faker"
 
-COPY Pipeline/kafka_producer.py       .
-COPY Pipeline/kafka_consumer.py       .
-COPY Pipeline/entrypoint_pipeline.py  .
+# Pipeline scripts
+COPY Pipeline/kafka_to_dbt.py        .
+COPY Pipeline/entrypoint_pipeline.py .
+#COPY Pipeline/wait_for.py            .
+COPY Pipeline/register_connector.py  .
 
-# Pure Python entrypoint — no shell, no bash, no heredocs, no temp files
+# dbt project — mounted at runtime via volume but copy for image fallback
+COPY dbt/ /app/dbt/
+
 ENTRYPOINT ["python3", "/app/entrypoint_pipeline.py"]
