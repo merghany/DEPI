@@ -16,6 +16,8 @@ RUN pip install --no-cache-dir \
     "kafka-python-ng" \
     "dbt-core" \
     "dbt-mysql" \
+    "mysql-connector-python" \
+    "protobuf<5.0.0" \
     "mysqlclient" \
     "faker"
 

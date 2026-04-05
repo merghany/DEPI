@@ -99,11 +99,12 @@ def run_dbt(reason: str):
                    "DBT_PROJECT_DIR":  DBT_PROJECT_DIR}
 
         def dbt_cmd(subcmd: list) -> list:
-            return ["dbt"] + subcmd + [
-                "--profiles-dir", DBT_PROFILES_DIR,
-                "--project-dir",  DBT_PROJECT_DIR,
-            ]
-
+            return [
+                "dbt" #,
+        #        "--profiles-dir", DBT_PROFILES_DIR,
+         #       "--project-dir",  DBT_PROJECT_DIR,
+            ] + subcmd
+        
         steps = [
             (dbt_cmd(["run", "--select", "staging"]), "staging"),
             (dbt_cmd(["run", "--select", "marts"]),   "marts"),
@@ -113,17 +114,20 @@ def run_dbt(reason: str):
 
         success = True
         for cmd, label in steps:
+            cmd = dbt_cmd(subcmd)    
             log.info("   [dbt] Running: %s", " ".join(cmd))
             result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                env=dbt_env,
-            )
+                        cmd,
+                        env=dbt_env,
+                        cwd=DBT_PROJECT_DIR,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.STDOUT,
+                        text=True
+                    )
             if result.returncode == 0:
                 log.info("   [dbt] ✅  %s complete", label)
             else:
-                log.error("   [dbt] ❌  %s failed:\n%s", label, result.stderr[-1000:])
+                log.error(f"   [dbt] ❌  {reason} failed:\n{result.stdout}")
                 success = False
                 break
 
